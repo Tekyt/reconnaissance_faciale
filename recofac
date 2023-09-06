@@ -1,0 +1,72 @@
+import streamlit as st
+import cv2
+import numpy as np
+
+# Charger le modèle de cascade pour la détection des visages
+face_cascade = cv2.CascadeClassifier('C:/Users/HP/Downloads/recoface.xml')
+
+# Titre de l'application
+st.title("Détection de visages avec Viola-Jones")
+
+# Ajouter des onglets pour la détection en direct et la détection sur une image
+option = st.selectbox("Choisir le mode de détection", ("Détection en direct", "Détection sur une image"))
+
+if option == "Détection en direct":
+    # Onglet pour la détection en direct
+    st.write("Cliquez sur le bouton ci-dessous pour démarrer la détection en direct depuis la webcam")
+    if st.button("Démarrer la détection en direct"):
+        # Initialiser la webcam
+        cap = cv2.VideoCapture(0)
+        while True:
+            # Lire les images depuis la webcam
+            ret, frame = cap.read()
+            # Convertir les images en niveaux de gris
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Détecter les visages en utilisant le classificateur en cascade des visages
+            visages = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+            # Dessiner des rectangles autour des visages détectés
+            for (x, y, w, h) in visages:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            # Afficher les images
+            cv2.imshow("Détection de visages avec l'algorithme Viola-Jones", frame)
+            # Sortir de la boucle lorsque 'q' est pressé
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        # Libérer la webcam et fermer toutes les fenêtres
+        cap.release()
+        cv2.destroyAllWindows()
+else:
+    # Onglet pour la détection sur une image téléchargée
+    image_telechargee = st.file_uploader("Téléchargez une image", type=["jpg", "png", "jpeg"])
+
+    if image_telechargee is not None:
+        image = cv2.imdecode(np.fromstring(image_telechargee.read(), np.uint8), 1)
+        st.image(image, caption="Image téléchargée", use_column_width=True)
+
+        # Ajuster les paramètres
+        min_neighbors = st.slider("Réglage minNeighbors", 1, 10, 3)
+        scale_factor = st.slider("Réglage scaleFactor", 1.01, 2.0, 1.05)
+
+        # Choix des valeurs RVB pour la couleur
+        red = st.slider("Rouge", 0, 255, 255)
+        green = st.slider("Vert", 0, 255, 0)
+        blue = st.slider("Bleu", 0, 255, 0)
+
+        # Créer un tuple RVB à partir des valeurs sélectionnées
+        color = (blue, green, red)
+
+        # Fonction de détection des visages
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=scale_factor, minNeighbors=min_neighbors)
+
+        # Dessiner les rectangles autour des visages détectés
+        for (x, y, w, h) in faces:
+            cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+
+        # Afficher l'image avec les visages détectés
+        st.image(image, caption="Image avec visages détectés", use_column_width=True)
+
+        # Enregistrer l'image
+        if st.button("Enregistrer l'image avec visages"):
+            cv2.imwrite("image_avec_visages.jpg", image)
+            st.success("Image enregistrée avec succès!")
